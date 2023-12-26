@@ -6,7 +6,8 @@ import com.src.userservice.models.SessionStatus;
 import com.src.userservice.models.User;
 import com.src.userservice.repositories.SessionRepository;
 import com.src.userservice.repositories.UserRepository;
-import org.apache.commons.lang3.RandomStringUtils;
+import io.jsonwebtoken.Jwts;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
+import javax.crypto.SecretKey;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -41,13 +44,22 @@ public class AuthService {
         if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
             return null;
         }
+        Date expiryDate = DateUtils.addDays(new Date(), 2);
+        SecretKey key = Jwts.SIG.HS256.key().build();
 
-        String token = RandomStringUtils.randomAlphanumeric(30);
+         String token = Jwts.builder()
+                .subject(email)
+                .claim("email", email)
+                .expiration(expiryDate)
+                .issuedAt(new Date())
+                .signWith(key)
+                .compact(); //RandomStringUtils.randomAlphanumeric(30);
 
         Session session = new Session();
         session.setSessionStatus(SessionStatus.ACTIVE);
         session.setToken(token);
         session.setUser(user);
+        session.setExpiringAt(expiryDate);
         sessionRepository.save(session);
 
         UserDto userDto = new UserDto();
