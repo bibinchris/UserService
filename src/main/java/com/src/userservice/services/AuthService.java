@@ -6,6 +6,8 @@ import com.src.userservice.models.SessionStatus;
 import com.src.userservice.models.User;
 import com.src.userservice.repositories.SessionRepository;
 import com.src.userservice.repositories.UserRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +24,7 @@ import java.util.Optional;
 
 @Service
 public class AuthService {
+    public static final String EMAIL = "email";
     private UserRepository userRepository;
     private SessionRepository sessionRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
@@ -49,7 +52,7 @@ public class AuthService {
 
          String token = Jwts.builder()
                 .subject(email)
-                .claim("email", email)
+                .claim(EMAIL, email)
                 .expiration(expiryDate)
                 .issuedAt(new Date())
                 .signWith(key)
@@ -111,6 +114,20 @@ public class AuthService {
         if (sessionOptional.isEmpty()) {
             return null;
         }
+
+        Session session = sessionOptional.get();
+        if(!session.getSessionStatus().equals(SessionStatus.ACTIVE)) {
+            return SessionStatus.ENDED;
+        }
+        if(session.getExpiringAt().before(new Date())){
+            return SessionStatus.ENDED;
+        }
+
+        // JWT Decoding
+        Jws<Claims> jwtClaims = Jwts.parser().build().parseSignedClaims(token);
+        String email = jwtClaims.getPayload().get(EMAIL).toString();
+        Date createdAt = jwtClaims.getPayload().getIssuedAt();
+        Date expiryAt = jwtClaims.getPayload().getExpiration();
 
         return SessionStatus.ACTIVE;
     }
