@@ -1,7 +1,6 @@
 package com.src.userservice.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +13,6 @@ import java.util.Set;
 public class User extends BaseModel {
     private String email;
     private String password;
-    @ManyToMany
-    private Set<Role> roles = new HashSet<>();
+    @ManyToMany(fetch = jakarta.persistence.FetchType.EAGER)
+    private Set<Role> roles = new java.util.LinkedHashSet<>();
 }

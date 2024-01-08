@@ -10,14 +10,17 @@ import org.springframework.http.*;
 import org.springframework.security.config.*;
 import org.springframework.security.config.annotation.web.builders.*;
 import org.springframework.security.config.annotation.web.configuration.*;
+import org.springframework.security.core.authority.*;
 import org.springframework.security.crypto.bcrypt.*;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.oidc.*;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.server.authorization.*;
 import org.springframework.security.oauth2.server.authorization.client.*;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.*;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.*;
 import org.springframework.security.oauth2.server.authorization.settings.*;
+import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.*;
 import org.springframework.security.web.util.matcher.*;
@@ -25,6 +28,7 @@ import org.springframework.security.web.util.matcher.*;
 import java.security.*;
 import java.security.interfaces.*;
 import java.util.*;
+import java.util.stream.*;
 
 @Configuration
 @EnableWebSecurity
@@ -138,5 +142,21 @@ public class SecurityConfig {
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder().build();
     }
+
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> jwtTokenCustomizer() {
+        return (context) -> {
+            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+                context.getClaims().claims((claims) -> {
+                    Set<String> roles = AuthorityUtils.authorityListToSet(context.getPrincipal().getAuthorities())
+                            .stream()
+                            .map(c -> c.replaceFirst("^ROLE_", ""))
+                            .collect(Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
+                    claims.put("roles", roles);
+                });
+            }
+        };
+    }
+
 
 }
